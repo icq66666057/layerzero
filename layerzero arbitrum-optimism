@@ -1,0 +1,40 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+// Импортируем интерфейс LayerZero для взаимодействия с LayerZero Endpoint
+import "@layerzerolabs/contracts/interfaces/ILayerZeroEndpoint.sol";
+
+contract BridgeSender {
+    // Адрес LayerZero Endpoint в сети Arbitrum
+    ILayerZeroEndpoint public endpoint;
+
+    // Идентификатор цепи для сети Optimism
+    uint256 public constant optimismChainId = /* ID сети Optimism */;
+
+    constructor(address _layerZeroEndpoint) {
+        endpoint = ILayerZeroEndpoint(_layerZeroEndpoint);
+    }
+
+    // Функция для отправки ETH с Arbitrum в Optimism
+    function sendETHToOptimism(uint64 _nonce, address _receiver) external payable {
+        require(msg.value > 0, "Must send ETH");
+
+        // Подготовка данных сообщения
+        bytes memory payload = abi.encode(_receiver, msg.value);
+
+        // Отправка ETH в LayerZero Endpoint
+        endpoint.send{value: msg.value}(
+            optimismChainId,                // Указываем ID сети Optimism
+            abi.encodePacked(_receiver),    // Получатель на сети Optimism
+            payload,                        // Посылаем информацию о транзакции
+            payable(msg.sender),            // Адрес для возмещения средств в случае неудачи
+            address(0),                     // Адрес для вызова fallback, если необходим
+            bytes("")                       // Дополнительные данные для fallback
+        );
+
+        // Здесь можно было бы также эмитировать событие об успешной отправке
+    }
+
+    // Получение средств, для возможности отправки их через LayerZero
+    receive() external payable {}
+}
